@@ -1,13 +1,21 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.express as px
 import plotly.graph_objects as go
 
 from sklearn.linear_model import LinearRegression, Ridge
-from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import (
+    GroupKFold,
+    GroupShuffleSplit,
+    cross_val_score,
+    train_test_split,
+    validation_curve,
+)
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
+
+FEATURES = ['Sleep Duration', 'Stress Level', 'Heart Rate', 'Physical Activity Level']
+TARGET = 'Quality of Sleep'
 
 
 def render_evaluation(df):
@@ -16,8 +24,37 @@ def render_evaluation(df):
         "Phân tích hiệu năng mô hình, hiện tượng Overfitting/Underfitting và kỹ thuật Điều chuẩn (Regularization) Ridge.")
 
     # Kiểm tra biến mục tiêu và các biến độc lập
-    Y = df['Quality of Sleep']
-    X_data = df[['Sleep Duration', 'Stress Level', 'Heart Rate', 'Physical Activity Level']]
+    Y = df[TARGET]
+    X_data = df[FEATURES]
+
+    # Mỗi "hồ sơ" = một tổ hợp giá trị giống hệt nhau (bỏ qua Person ID).
+    # Các dòng trùng hồ sơ phải nằm cùng một phía Train hoặc Test, nếu không
+    # tập Test chỉ là bản sao của tập Train và R² bị thổi phồng.
+    profile_cols = [c for c in df.columns if c != 'Person ID']
+    groups = df[profile_cols].astype(str).agg('|'.join, axis=1)
+    n_profiles = groups.nunique()
+
+    if n_profiles < 10:
+        st.warning(
+            f"⚠️ Bộ lọc hiện tại chỉ còn {n_profiles} hồ sơ khác nhau, không đủ để chia Train/Test và "
+            "Cross-Validation. Hãy nới rộng bộ lọc ở thanh bên.")
+        return
+
+    # Tách Train / Test (70% - 30%) theo hồ sơ
+    splitter = GroupShuffleSplit(n_splits=1, test_size=0.3, random_state=42)
+    train_idx, test_idx = next(splitter.split(X_data, Y, groups))
+    x_train, x_test = X_data.iloc[train_idx], X_data.iloc[test_idx]
+    y_train, y_test = Y.iloc[train_idx], Y.iloc[test_idx]
+    g_train = groups.iloc[train_idx]
+
+    # Để minh họa: nếu chia ngẫu nhiên theo dòng thì bao nhiêu dòng Test có bản sao trong Train?
+    naive_train, naive_test = train_test_split(np.arange(len(df)), test_size=0.3, random_state=42)
+    n_leaked = groups.iloc[naive_test].isin(set(groups.iloc[naive_train])).sum()
+
+    st.info(
+        f"ℹ️ Dữ liệu có **{len(df)} dòng** nhưng chỉ **{n_profiles} hồ sơ khác nhau**. Nếu chia ngẫu nhiên theo dòng, "
+        f"**{n_leaked}/{len(naive_test)}** dòng Test sẽ có bản sao y hệt trong Train (rò rỉ dữ liệu). "
+        f"Vì vậy chương này chia theo hồ sơ: Train {len(x_train)} dòng, Test {len(x_test)} dòng, không hồ sơ nào nằm ở cả hai tập.")
 
     # Khởi tạo 3 Tabs dựa trên 3 phần phân tích của Chương 7
     tab1, tab2, tab3 = st.tabs([
@@ -32,33 +69,39 @@ def render_evaluation(df):
     with tab1:
         st.header("1. Đánh giá Mô hình trên Tập Test & Cross-Validation")
         st.markdown(
-            "Tách tập dữ liệu theo tỉ lệ **70% Train / 30% Test** và đánh giá độ ổn định qua **5-Fold Cross Validation**.")
+            "Tách tập dữ liệu theo tỉ lệ **70% Train / 30% Test** (theo hồ sơ) và đánh giá độ ổn định qua **5-Fold Cross Validation**.")
 
         col_code1, col_res1 = st.columns([1, 1])
 
         # Thực thi tính toán
-        x_train, x_test, y_train, y_test = train_test_split(X_data, Y, test_size=0.3, random_state=42)
-
         lr = LinearRegression()
         lr.fit(x_train, y_train)
 
         train_r2 = lr.score(x_train, y_train)
         test_r2 = lr.score(x_test, y_test)
 
-        cv_scores = cross_val_score(lr, X_data, Y, cv=5)
+        cv_scores = cross_val_score(lr, X_data, Y, cv=GroupKFold(n_splits=5), groups=groups)
         cv_mean_r2 = cv_scores.mean()
+        cv_std_r2 = cv_scores.std()
 
         with col_code1:
             st.subheader("💻 Code Python tính toán")
             code_tab1 = """
 from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import GroupKFold, GroupShuffleSplit, cross_val_score
 
 Y = df['Quality of Sleep']
 X_data = df[['Sleep Duration', 'Stress Level', 'Heart Rate', 'Physical Activity Level']]
 
-# 1. Tách Train / Test (70% - 30%)
-x_train, x_test, y_train, y_test = train_test_split(X_data, Y, test_size=0.3, random_state=42)
+# Các dòng giống hệt nhau (trừ Person ID) thuộc cùng một nhóm
+profile_cols = [c for c in df.columns if c != 'Person ID']
+groups = df[profile_cols].astype(str).agg('|'.join, axis=1)
+
+# 1. Tách Train / Test (70% - 30%) theo nhóm
+splitter = GroupShuffleSplit(n_splits=1, test_size=0.3, random_state=42)
+train_idx, test_idx = next(splitter.split(X_data, Y, groups))
+x_train, x_test = X_data.iloc[train_idx], X_data.iloc[test_idx]
+y_train, y_test = Y.iloc[train_idx], Y.iloc[test_idx]
 
 lr = LinearRegression()
 lr.fit(x_train, y_train)
@@ -66,8 +109,8 @@ lr.fit(x_train, y_train)
 train_r2 = lr.score(x_train, y_train)
 test_r2 = lr.score(x_test, y_test)
 
-# 2. Cross Validation (5-Fold)
-cv_scores = cross_val_score(lr, X_data, Y, cv=5)
+# 2. Cross Validation (5-Fold) theo nhóm
+cv_scores = cross_val_score(lr, X_data, Y, cv=GroupKFold(n_splits=5), groups=groups)
 cv_mean_r2 = cv_scores.mean()
 """
             st.code(code_tab1, language='python')
@@ -112,10 +155,25 @@ cv_mean_r2 = cv_scores.mean()
         )
         st.plotly_chart(fig1, use_container_width=True)
 
+        # Nhận xét sinh ra từ số liệu, không viết cứng
+        gap = train_r2 - test_r2
+        if abs(gap) < 0.05:
+            gap_text = "chênh lệch nhỏ, chưa thấy dấu hiệu overfitting ở mô hình tuyến tính 4 biến"
+        elif gap > 0:
+            gap_text = "Train cao hơn Test rõ rệt, là dấu hiệu mô hình đang overfitting"
+        else:
+            gap_text = ("Test cao hơn Train; điều này đến từ sự ngẫu nhiên của một lần chia với tập Test nhỏ, "
+                        "không có nghĩa mô hình dự đoán dữ liệu mới tốt hơn dữ liệu đã học")
+
+        if cv_std_r2 < 0.05:
+            cv_text = "các fold cho kết quả gần nhau, mô hình hoạt động ổn định trên các phần dữ liệu khác nhau"
+        else:
+            cv_text = "kết quả dao động đáng kể giữa các fold, nên một lần chia Train/Test đơn lẻ chưa đủ tin cậy"
+
         st.subheader("💡 Giải thích & Phân tích")
         st.markdown(f"""
-        - **Khả năng tổng quát hóa (Generalization):** Sự chênh lệch giữa **Train $R^2$ ({train_r2:.4f})** và **Test $R^2$ ({test_r2:.4f})** rất nhỏ, cho thấy mô hình không bị overfitting quá mức khi kiểm thử dữ liệu mới.
-        - **Độ ổn định (5-Fold CV):** Giá trị $R^2$ trung bình qua 5 lượt kiểm tra đạt **{cv_mean_r2:.4f}**, khẳng định tập dữ liệu có tính đồng nhất cao và mô hình hoạt động ổn định.
+        - **Khả năng tổng quát hóa (Generalization):** **Train $R^2$ = {train_r2:.4f}**, **Test $R^2$ = {test_r2:.4f}** (chênh {gap:+.4f}): {gap_text}.
+        - **Độ ổn định (5-Fold CV):** $R^2$ trung bình **{cv_mean_r2:.4f}** (độ lệch chuẩn {cv_std_r2:.4f}, thấp nhất {cv_scores.min():.4f}, cao nhất {cv_scores.max():.4f}): {cv_text}.
         """)
 
     # =============================================================================
@@ -132,10 +190,15 @@ cv_mean_r2 = cv_scores.mean()
         degrees = [1, 2, 3, 4, 5]
         r2_train, r2_test = [], []
 
+        # Chuẩn hóa Stress Level trước khi nâng bậc để phép tính bậc cao ổn định về mặt số học
+        stress_scaler = StandardScaler().fit(x_train[['Stress Level']])
+        s_train = stress_scaler.transform(x_train[['Stress Level']])
+        s_test = stress_scaler.transform(x_test[['Stress Level']])
+
         for d in degrees:
             poly = PolynomialFeatures(degree=d)
-            x_tr_p = poly.fit_transform(x_train[['Stress Level']])
-            x_te_p = poly.transform(x_test[['Stress Level']])
+            x_tr_p = poly.fit_transform(s_train)
+            x_te_p = poly.transform(s_test)
 
             m = LinearRegression().fit(x_tr_p, y_train)
             r2_train.append(m.score(x_tr_p, y_train))
@@ -147,10 +210,15 @@ cv_mean_r2 = cv_scores.mean()
 degrees = [1, 2, 3, 4, 5]
 r2_train, r2_test = [], []
 
+# Chuẩn hóa Stress Level trước khi nâng bậc
+stress_scaler = StandardScaler().fit(x_train[['Stress Level']])
+s_train = stress_scaler.transform(x_train[['Stress Level']])
+s_test = stress_scaler.transform(x_test[['Stress Level']])
+
 for d in degrees:
     poly = PolynomialFeatures(degree=d)
-    x_tr_p = poly.fit_transform(x_train[['Stress Level']])
-    x_te_p = poly.transform(x_test[['Stress Level']])
+    x_tr_p = poly.fit_transform(s_train)
+    x_te_p = poly.transform(s_test)
 
     m = LinearRegression().fit(x_tr_p, y_train)
     r2_train.append(m.score(x_tr_p, y_train))
@@ -182,10 +250,20 @@ for d in degrees:
         )
         st.plotly_chart(fig2, use_container_width=True)
 
+        best_d_idx = int(np.argmax(r2_test))
+        n_stress = df['Stress Level'].nunique()
+        if r2_test[-1] < r2_test[best_d_idx] - 0.02:
+            over_text = (f"Sau bậc {degrees[best_d_idx]}, Train $R^2$ vẫn giữ ở mức cao nhưng Test $R^2$ giảm còn "
+                         f"{r2_test[-1]:.4f} ở bậc {degrees[-1]}: đây là dấu hiệu overfitting.")
+        else:
+            over_text = (f"Đến bậc {degrees[-1]}, Test $R^2$ ({r2_test[-1]:.4f}) không giảm đáng kể so với mức cao nhất, "
+                         "nên **chưa quan sát thấy overfitting** trong khoảng bậc này.")
+
         st.subheader("💡 Giải thích & Phân tích")
-        st.markdown("""
-        - **Underfitting (Bậc quá thấp):** Ở các bậc đa thức nhỏ, mô hình có thể quá đơn giản để bắt được xu hướng thực tế của dữ liệu.
-        - **Overfitting (Bậc quá cao):** Khi bậc đa thức tăng lên quá cao, điểm $R^2$ trên tập Train tiếp tục tăng hoặc giữ ở mức cao nhưng $R^2$ trên tập Test giảm sút đáng kể. Điểm gãy giữa Train và Test chính là dấu hiệu của hiện tượng học vẹt (Overfitting).
+        st.markdown(f"""
+        - **Bậc tốt nhất trên tập Test:** bậc **{degrees[best_d_idx]}** với Test $R^2$ = **{r2_test[best_d_idx]:.4f}** (bậc 1: {r2_test[0]:.4f}).
+        - **Overfitting:** {over_text}
+        - **Giới hạn của dữ liệu:** *Stress Level* chỉ nhận **{n_stress} giá trị khác nhau**, nên đa thức bậc {n_stress - 1} đã đi qua trung bình của từng mức stress; tăng bậc cao hơn không làm mô hình phức tạp thêm. Biến này vì vậy không phù hợp để minh họa overfitting mạnh.
         """)
 
     # =============================================================================
@@ -194,74 +272,87 @@ for d in degrees:
     with tab3:
         st.header("3. Hồi quy Ridge: Tối ưu hóa Tham số Điều chuẩn (Alpha)")
         st.markdown(
-            "Ứng dụng thuật toán **Ridge Regression** kết hợp chuẩn hóa dữ liệu (`StandardScaler`) trên đa thức bậc 3 để kiểm soát Overfitting.")
+            "Ứng dụng thuật toán **Ridge Regression** kết hợp chuẩn hóa dữ liệu (`StandardScaler`) trên đa thức bậc 3. "
+            "Alpha được chọn bằng **Cross-Validation trên tập Train**; tập Test chỉ dùng một lần để báo cáo kết quả cuối.")
 
         col_code3, col_res3 = st.columns([1, 1])
 
-        # 1. Chuẩn hóa dữ liệu & Tạo biến đa thức bậc 3
-        scaler = StandardScaler()
-        x_tr_scaled = scaler.fit_transform(x_train)
-        x_te_scaled = scaler.transform(x_test)
+        # 1. Pipeline: Chuẩn hóa dữ liệu -> Đa thức bậc 3 -> Ridge
+        ridge_pipe = Pipeline([
+            ('scale', StandardScaler()),
+            ('polynomial', PolynomialFeatures(degree=3, include_bias=False)),
+            ('model', Ridge())
+        ])
 
-        poly3 = PolynomialFeatures(degree=3, include_bias=False)
-        x_tr_p3 = poly3.fit_transform(x_tr_scaled)
-        x_te_p3 = poly3.transform(x_te_scaled)
+        # 2. Quét dãy alpha (Log scale) bằng 5-Fold CV theo hồ sơ, chỉ trên tập Train
+        alphas = np.logspace(-2, 4, 50)
+        cv_train_scores, cv_val_scores = validation_curve(
+            ridge_pipe, x_train, y_train,
+            param_name='model__alpha', param_range=alphas,
+            cv=GroupKFold(n_splits=5), groups=g_train
+        )
+        r_train_scores = cv_train_scores.mean(axis=1)
+        r_val_scores = cv_val_scores.mean(axis=1)
 
-        # 2. Tạo dãy leo thang alpha (Log scale)
-        alphas = np.logspace(-2, 4, 100)
-        r_train_scores, r_test_scores = [], []
-
-        for a in alphas:
-            ridge_model = Ridge(alpha=a)
-            ridge_model.fit(x_tr_p3, y_train)
-            r_train_scores.append(ridge_model.score(x_tr_p3, y_train))
-            r_test_scores.append(ridge_model.score(x_te_p3, y_test))
-
-        # Tìm Alpha tối ưu
-        best_idx = np.argmax(r_test_scores)
+        # Tìm Alpha tối ưu theo điểm Validation
+        best_idx = int(np.argmax(r_val_scores))
         best_alpha = alphas[best_idx]
-        best_test_r2 = r_test_scores[best_idx]
+
+        # 3. Huấn luyện lại trên toàn bộ Train với Alpha tối ưu, chấm một lần trên Test
+        ridge_pipe.set_params(model__alpha=best_alpha).fit(x_train, y_train)
+        ridge_train_r2 = ridge_pipe.score(x_train, y_train)
+        ridge_test_r2 = ridge_pipe.score(x_test, y_test)
 
         with col_code3:
             st.subheader("💻 Code Python tính toán")
             code_tab3 = """
 from sklearn.linear_model import Ridge
+from sklearn.model_selection import GroupKFold, validation_curve
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
 
-# Chuẩn hóa & Biến đổi đa thức bậc 3
-scaler = StandardScaler()
-x_tr_scaled = scaler.fit_transform(x_train)
-x_te_scaled = scaler.transform(x_test)
+ridge_pipe = Pipeline([
+    ('scale', StandardScaler()),
+    ('polynomial', PolynomialFeatures(degree=3, include_bias=False)),
+    ('model', Ridge())
+])
 
-poly3 = PolynomialFeatures(degree=3, include_bias=False)
-x_tr_p3 = poly3.fit_transform(x_tr_scaled)
-x_te_p3 = poly3.transform(x_te_scaled)
+# Quét Alpha bằng 5-Fold CV, chỉ trên tập Train
+alphas = np.logspace(-2, 4, 50)
+cv_train_scores, cv_val_scores = validation_curve(
+    ridge_pipe, x_train, y_train,
+    param_name='model__alpha', param_range=alphas,
+    cv=GroupKFold(n_splits=5), groups=g_train
+)
+best_alpha = alphas[np.argmax(cv_val_scores.mean(axis=1))]
 
-# Quét giá trị Alpha
-alphas = np.logspace(-2, 4, 100)
-for a in alphas:
-    ridge_model = Ridge(alpha=a).fit(x_tr_p3, y_train)
-    r_train_scores.append(ridge_model.score(x_tr_p3, y_train))
-    r_test_scores.append(ridge_model.score(x_te_p3, y_test))
+# Huấn luyện lại với Alpha tối ưu, chấm một lần trên Test
+ridge_pipe.set_params(model__alpha=best_alpha).fit(x_train, y_train)
+ridge_test_r2 = ridge_pipe.score(x_test, y_test)
 """
             st.code(code_tab3, language='python')
 
         with col_res3:
             st.subheader("📋 Kết quả Tối ưu Ridge")
             st.metric("Alpha tối ưu (Best Alpha)", f"{best_alpha:.4f}")
-            st.metric("Test R² Đạt được", f"{best_test_r2:.4f}")
-            st.metric("Train R² Tương ứng", f"{r_train_scores[best_idx]:.4f}")
+            st.metric("Validation R² (CV trên Train)", f"{r_val_scores[best_idx]:.4f}")
+            st.metric("Test R² Đạt được", f"{ridge_test_r2:.4f}")
+            st.metric("Train R² Tương ứng", f"{ridge_train_r2:.4f}")
 
         st.subheader("📊 Biểu đồ Mối liên quan giữa Alpha (Log Scale) và R²")
 
         fig3 = go.Figure()
-        fig3.add_trace(go.Scatter(x=alphas, y=r_train_scores, mode='lines', name='Train R²', line=dict(color='blue')))
-        fig3.add_trace(go.Scatter(x=alphas, y=r_test_scores, mode='lines', name='Validation Test R²',
+        fig3.add_trace(go.Scatter(x=alphas, y=r_train_scores, mode='lines', name='Train R² (trung bình CV)',
+                                  line=dict(color='blue')))
+        fig3.add_trace(go.Scatter(x=alphas, y=r_val_scores, mode='lines', name='Validation R² (trung bình CV)',
                                   line=dict(color='red', width=2)))
 
         # Vạch đường thẳng alpha tối ưu
-        fig3.add_vline(x=best_alpha, line_dash="dash", line_color="green",
-                       annotation_text=f"Alpha tối ưu ({best_alpha:.2f})")
+        y_low = min(r_train_scores.min(), r_val_scores.min())
+        y_high = max(r_train_scores.max(), r_val_scores.max())
+        fig3.add_trace(go.Scatter(x=[best_alpha, best_alpha], y=[y_low, y_high], mode='lines',
+                                  name=f'Alpha tối ưu ({best_alpha:.2f})',
+                                  line=dict(color='green', dash='dash')))
 
         fig3.update_layout(
             title="3. Hồi quy Ridge: Mối liên quan giữa Alpha và R²",
@@ -271,8 +362,26 @@ for a in alphas:
         )
         st.plotly_chart(fig3, use_container_width=True)
 
+        diff = ridge_test_r2 - test_r2
+        if diff > 0.02:
+            compare_text = "ở lần chia này Ridge bậc 3 **tốt hơn** mô hình tuyến tính trên dữ liệu chưa từng thấy"
+        elif diff < -0.02:
+            compare_text = ("Ridge bậc 3 **kém hơn** mô hình tuyến tính trên dữ liệu chưa từng thấy: độ phức tạp tăng thêm "
+                            "không cải thiện khả năng dự đoán, nên chọn mô hình tuyến tính đơn giản hơn")
+        else:
+            compare_text = ("hai mô hình **tương đương** trên dữ liệu chưa từng thấy, nên ưu tiên mô hình tuyến tính "
+                            "vì đơn giản và dễ giải thích hơn")
+
+        if best_idx in (0, len(alphas) - 1):
+            edge_text = (" Alpha tối ưu nằm ở **biên của dải khảo sát**, tức đường Validation chưa đạt đỉnh trong dải này; "
+                         "cần mở rộng dải alpha nếu muốn kết luận chắc hơn.")
+        else:
+            edge_text = ""
+
         st.subheader("💡 Giải thích & Phân tích")
         st.markdown(f"""
         - **Vai trò của Alpha:** Khi $\\alpha$ quá nhỏ, mô hình giống như Hồi quy đa thức thông thường (dễ bị Overfitting). Khi $\\alpha$ quá lớn, mô hình bị phạt trọng số quá mạnh dẫn đến Underfitting.
-        - **Giá trị tối ưu:** Với hệ số $\\alpha = {best_alpha:.4f}$, mô hình Ridge đạt được điểm $R^2$ kiểm thử cao nhất là **{best_test_r2:.4f}**, cân bằng tốt nhất giữa độ phức tạp và khả năng dự đoán.
+        - **Giá trị tối ưu:** $\\alpha = {best_alpha:.4f}$ cho Validation $R^2$ cao nhất (**{r_val_scores[best_idx]:.4f}**).{edge_text}
+        - **So sánh trên tập Test:** Ridge bậc 3 đạt Test $R^2$ = **{ridge_test_r2:.4f}** (Train {ridge_train_r2:.4f}), mô hình tuyến tính 4 biến ở Tab 1 đạt **{test_r2:.4f}**. Kết luận: {compare_text}.
+        - **Lưu ý:** đây là kết quả của **một lần chia** với tập Test {len(x_test)} dòng. Mô hình bậc 3 có nhiều tham số nên nhạy với cách chia hơn mô hình tuyến tính; thứ hạng hai mô hình có thể thay đổi khi chia khác đi.
         """)

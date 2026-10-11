@@ -1,5 +1,5 @@
 import streamlit as st
-from modules.data_loader import load_data
+from modules.data_loader import load_data, load_raw_data
 from views.demographics import render_demographics
 from views.evaluation import render_evaluation  # <--- Bổ sung import Chương 7
 from views.explorer import render_explorer
@@ -59,7 +59,8 @@ if chapter == "Chương 1: Tổng Quan & KPIs":
     render_overview(df)
 
 elif chapter == "Chương 2: Tiền xử lý dữ liệu":
-    render_demographics(df_raw)
+    # Chương 2 cần dữ liệu thô (chưa fillna) để minh họa bước làm sạch
+    render_demographics(load_raw_data())
 
 elif chapter == "Chương 3: Trực quan hóa dữ liệu":
     render_sleep_analysis(df)

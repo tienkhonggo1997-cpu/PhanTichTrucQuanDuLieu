@@ -12,6 +12,10 @@ from sklearn.pipeline import Pipeline
 def render_regression(df):
     st.title("📊 Chương 6: Mô Hình Hồi Quy (Model Development)")
     st.markdown("Xây dựng và đánh giá các mô hình hồi quy (SLR, MLR, Polynomial Regression, Pipeline).")
+    st.info(
+        "ℹ️ R² và MSE trong chương này được tính trên **chính dữ liệu dùng để huấn luyện** (in-sample), "
+        "nên mô hình càng phức tạp thì R² càng cao. Khả năng dự đoán trên dữ liệu mới được đánh giá ở Chương 7."
+    )
 
     # Tạo 4 Tab ứng với 4 phần trong code mẫu
     tab1, tab2, tab3, tab4 = st.tabs([

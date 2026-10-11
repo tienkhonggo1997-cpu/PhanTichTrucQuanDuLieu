@@ -5,7 +5,7 @@ import streamlit as st
 
 
 def render_demographics(df_raw):
-    st.title("🛠️ Chương 1: Tiền Xử Lý & Làm Sạch Dữ Liệu")
+    st.title("🛠️ Chương 2: Tiền Xử Lý & Làm Sạch Dữ Liệu")
     st.caption(
         "Khám phá thực trạng dữ liệu thô, xem mã nguồn xử lý và thực thi làm sạch dữ liệu trực tiếp."
     )
@@ -50,6 +50,21 @@ def render_demographics(df_raw):
             st.info("🎉 Dữ liệu hiện tại không có giá trị khuyết (NaN) nào!")
         else:
             st.plotly_chart(fig_missing, use_container_width=True)
+
+    st.info(
+        "ℹ️ Các ô khuyết ở cột *Sleep Disorder* thực chất là chữ `None` (không mắc rối loạn) "
+        "trong file CSV, bị `pd.read_csv` đọc thành NaN. Vì vậy điền lại bằng `'None'` là hợp lý, "
+        "không phải suy đoán giá trị thiếu."
+    )
+
+    # Kiểm tra hồ sơ trùng lặp (bỏ qua cột Person ID)
+    profile_cols = [c for c in df_raw.columns if c != "Person ID"]
+    n_profiles = len(df_raw[profile_cols].drop_duplicates())
+    st.warning(
+        f"⚠️ **Dữ liệu trùng lặp:** {len(df_raw)} dòng nhưng chỉ có **{n_profiles} hồ sơ khác nhau** "
+        "(các dòng còn lại giống hệt nhau, chỉ khác *Person ID*). Các chương biểu đồ vẫn dùng đủ "
+        f"{len(df_raw)} dòng; riêng Chương 7 chia Train/Test theo hồ sơ để bản sao không nằm ở cả hai tập."
+    )
 
     st.markdown("---")
 

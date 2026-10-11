@@ -1,11 +1,19 @@
 import pandas as pd
 import streamlit as st
 
+DATA_PATH = "data/Sleep_health_and_lifestyle_dataset.csv"
+
+
+@st.cache_data
+def load_raw_data():
+    # Đọc dữ liệu thô, chưa qua xử lý (dùng cho Chương 2)
+    return pd.read_csv(DATA_PATH)
+
 
 @st.cache_data
 def load_data():
     # Đọc dữ liệu từ thư mục data
-    df = pd.read_csv("data/Sleep_health_and_lifestyle_dataset.csv")
+    df = load_raw_data().copy()
 
     # Xử lý dữ liệu khuyết & chuẩn hóa
     df["Sleep Disorder"] = df["Sleep Disorder"].fillna("None")

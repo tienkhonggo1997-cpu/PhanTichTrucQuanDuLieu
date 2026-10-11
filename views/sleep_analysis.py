@@ -6,7 +6,7 @@ import streamlit as st
 
 
 def render_sleep_analysis(df):
-    st.title("📊 Chương 2: Trực Quan Hóa & Phân Tích Dữ Liệu")
+    st.title("📊 Chương 3: Trực Quan Hóa & Phân Tích Dữ Liệu")
     st.caption(
         "Trực quan hóa dữ liệu đa chiều kết hợp phân tích chuyên sâu về các yếu tố ảnh hưởng đến Giấc ngủ và Sức khỏe."
     )

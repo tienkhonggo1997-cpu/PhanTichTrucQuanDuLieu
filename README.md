@@ -202,12 +202,19 @@ R² ở chương này được tính trên chính dữ liệu dùng để huấn
 - Cross-Validation 5-fold cũng chia theo hồ sơ bằng `GroupKFold`.
 - Hệ số điều chuẩn alpha của Ridge được chọn bằng Cross-Validation trên tập Train. Tập Test chỉ dùng một lần để báo cáo kết quả cuối.
 
-**Kết quả**
+**So sánh năm mô hình**
 
-| Mô hình | Train R² | Test R² | Ghi chú |
-|---|---|---|---|
-| Tuyến tính 4 biến | 0.889 | 0.914 | CV 5-fold: trung bình 0.875, từ 0.826 đến 0.925 |
-| Ridge trên đa thức bậc 3 | 0.958 | 0.953 | alpha = 8.69 |
+Bốn mô hình của Chương 6 và mô hình Ridge được đánh giá trên cùng một cách chia (tab "So sánh các mô hình" của Chương 7):
+
+| Mô hình | Train R² | Test R² | R² kiểm định chéo | R² trung bình qua 30 lần chia |
+|---|---|---|---|---|
+| Tuyến tính đơn (Sleep Duration) | 0.772 | 0.798 | 0.762 | 0.753 |
+| Đa thức bậc 2 (Stress Level) | 0.808 | 0.807 | 0.796 | 0.791 |
+| Tuyến tính đa biến (4 biến) | 0.889 | 0.914 | 0.875 | 0.877 |
+| Pipeline đa thức bậc 2 (4 biến) | 0.960 | 0.950 | 0.944 | 0.936 |
+| Ridge đa thức bậc 3 (4 biến), alpha = 8.69 | 0.958 | 0.953 | 0.934 | 0.924 |
+
+Alpha của Ridge được chọn bằng kiểm định chéo trên tập Train và giữ cố định trong các phép so sánh.
 
 **Underfitting và overfitting theo bậc đa thức** (một biến `Stress Level`)
 
@@ -221,16 +228,17 @@ R² ở chương này được tính trên chính dữ liệu dùng để huấn
 
 **Nhận xét**
 
-- Mô hình tuyến tính 4 biến có Train R² và Test R² gần nhau và ổn định qua các fold, không có dấu hiệu overfitting.
-- Ridge trên đa thức bậc 3 cho Test R² cao hơn (0.953 so với 0.914), nhưng kém ổn định hơn. Khi lặp lại với 30 cách chia Train/Test khác nhau, Ridge bậc 3 cho kết quả tốt hơn ở 23 lần, song R² trung bình lại thấp hơn (0.855 so với 0.877) do có lần giảm xuống dưới 0. Mô hình tuyến tính thấp nhất vẫn đạt 0.795.
-- Với biến `Stress Level`, bậc 1 đến 3 cho kết quả gần như nhau (underfitting nhẹ), bậc 4 và 5 cải thiện rõ. Không quan sát thấy overfitting, vì biến này chỉ có 6 giá trị khác nhau nên đa thức bậc 5 đã là mức phức tạp tối đa.
+- Hai mô hình một biến chỉ đạt R² kiểm định chéo khoảng 0.76–0.80; mô hình tuyến tính 4 biến đạt 0.875. Thêm biến đầu vào cải thiện rõ khả năng dự đoán.
+- Pipeline đa thức bậc 2 trên 4 biến là mô hình tốt nhất: R² kiểm định chéo 0.944, Test R² 0.950, Train và Test gần nhau nên không có dấu hiệu overfitting. Qua 30 lần chia, mô hình này cũng ổn định nhất (độ lệch chuẩn 0.021, thấp nhất 0.874).
+- Ridge đa thức bậc 3 có Test R² nhỉnh hơn một chút ở một lần chia (0.953) nhưng thấp hơn khi kiểm định chéo (0.934): tăng lên bậc 3 không mang lại cải thiện. Khi alpha quá nhỏ (0.01), mô hình bậc 3 overfitting nặng, với R² kiểm định chỉ khoảng 0.24.
+- Với một biến `Stress Level`, bậc 1 đến 3 cho kết quả gần như nhau, bậc 4 và 5 cải thiện rõ. Không quan sát thấy overfitting, vì biến này chỉ có 6 giá trị khác nhau nên đa thức bậc 5 đã là mức phức tạp tối đa.
 
 ## 6. Kết luận
 
 1. **Căng thẳng và thời lượng ngủ là hai yếu tố liên hệ mạnh nhất với chất lượng giấc ngủ**, với hệ số tương quan lần lượt là −0.90 và 0.88.
 2. **Thể trạng liên hệ rất rõ với rối loạn giấc ngủ**: 93% người có BMI bình thường không mắc rối loạn, so với 13% ở nhóm thừa cân.
 3. **Rối loạn giấc ngủ thay đổi theo tuổi**: Insomnia tập trung ở nhóm 36–50, Sleep Apnea chiếm tỷ lệ cao nhất ở nhóm 51–65.
-4. **Chất lượng giấc ngủ dự đoán được khá tốt**: mô hình tuyến tính với bốn biến đạt R² khoảng 0.88–0.91 trên dữ liệu chưa từng thấy. Mô hình phức tạp hơn có thể đạt R² cao hơn nhưng kém ổn định.
+4. **Chất lượng giấc ngủ dự đoán được tốt**: mô hình đa thức bậc 2 trên bốn biến đạt R² khoảng 0.94–0.95 trên dữ liệu chưa từng thấy và ổn định nhất trong năm mô hình được so sánh; mô hình tuyến tính bốn biến đạt khoảng 0.88–0.91.
 
 ## 7. Hạn chế và hướng phát triển
 
@@ -245,6 +253,6 @@ R² ở chương này được tính trên chính dữ liệu dùng để huấn
 
 **Hướng phát triển**
 
-- Bổ sung kiểm định thống kê (ANOVA, Chi-square) cho các khác biệt giữa các nhóm.
+- Bổ sung kiểm định Chi-square cho mối liên hệ giữa các biến phân loại.
 - Xây dựng mô hình phân loại để dự đoán dạng rối loạn giấc ngủ.
 - Thử nghiệm trên bộ dữ liệu lớn hơn và không trùng lặp.

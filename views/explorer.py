@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
 import streamlit as st
+from scipy import stats
 
 # Cấu hình giao diện Seaborn
 sns.set_theme(style="whitegrid")
@@ -171,3 +172,61 @@ def render_explorer(df):
         - **Kết luận:** Vận động giúp hỗ trợ sức khỏe nhưng không loại bỏ hoàn toàn nguy cơ do BMI và Stress.
         """
         )
+
+    st.markdown("---")
+
+    # --------------------------------------------------------------------------
+    # Chart 5.6: Kiểm định ANOVA Thời lượng ngủ theo Rối loạn giấc ngủ
+    # --------------------------------------------------------------------------
+    st.subheader("5.6 Kiểm Định ANOVA: Thời Lượng Ngủ Theo Rối Loạn Giấc Ngủ")
+
+    fig6, ax6 = plt.subplots(figsize=(9, 5))
+    sns.barplot(
+        data=df,
+        x="Sleep Disorder",
+        y="Sleep Duration",
+        hue="Sleep Disorder",
+        errorbar="sd",
+        palette="viridis",
+        legend=False,
+        ax=ax6,
+    )
+    ax6.set_title(
+        "Thời lượng ngủ trung bình (± độ lệch chuẩn) theo Trạng thái Giấc ngủ",
+        fontsize=12,
+        fontweight="bold",
+    )
+    ax6.set_xlabel("Trạng thái Giấc ngủ")
+    ax6.set_ylabel("Thời lượng ngủ trung bình (Giờ)")
+    plt.tight_layout()
+    st.pyplot(fig6)
+
+    # Kiểm định ANOVA một yếu tố: thời lượng ngủ có khác nhau giữa các nhóm không?
+    anova_groups = {
+        name: g["Sleep Duration"] for name, g in df.groupby("Sleep Disorder")
+    }
+    if len(anova_groups) >= 2 and all(len(g) >= 2 for g in anova_groups.values()):
+        f_stat, p_value = stats.f_oneway(*anova_groups.values())
+
+        col_f, col_p = st.columns(2)
+        col_f.metric("Giá trị F", f"{f_stat:.2f}")
+        col_p.metric("p-value", f"{p_value:.2e}")
+
+        means_text = ", ".join(
+            f"*{name}* {g.mean():.2f} giờ" for name, g in anova_groups.items()
+        )
+        if p_value < 0.05:
+            conclusion = "thời lượng ngủ trung bình giữa các nhóm **khác nhau có ý nghĩa thống kê** ở mức 0.05"
+        else:
+            conclusion = "**chưa đủ bằng chứng** để nói thời lượng ngủ trung bình giữa các nhóm khác nhau ở mức 0.05"
+
+        with st.expander("📌 **Giải thích & Phân tích (5.6)**", expanded=True):
+            st.markdown(
+                f"""
+            - **Trung bình từng nhóm:** {means_text}.
+            - **Kết quả kiểm định:** F = {f_stat:.2f}, p-value = {p_value:.2e}.
+            - **Kết luận:** {conclusion}.
+            """
+            )
+    else:
+        st.info("Bộ lọc hiện tại không đủ nhóm để chạy kiểm định ANOVA.")

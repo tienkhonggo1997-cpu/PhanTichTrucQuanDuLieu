@@ -50,9 +50,10 @@ def render_sleep_analysis(df):
             """
         * **Đánh giá chung:** 
             * Nhóm tuổi trẻ (**20-35**) hầu như có tỷ lệ giấc ngủ bình thường (*None*) rất cao và ít gặp các vấn đề nghiêm trọng về rối loạn giấc ngủ.
-            * Khi độ tuổi tăng lên nhóm **36-50** và **51-65**, số lượng người mắc các chứng rối loạn giấc ngủ như **Insomnia (Mất ngủ)** và **Sleep Apnea (Ngưng thở khi ngủ)** tăng lên rõ rệt.
-        * **Hàm ý / Đề xuất:** 
-            * Tuổi tác là một yếu tố nguy cơ đáng kể đối với chất lượng giấc ngủ, cần có các biện pháp can thiệp và chăm sóc sức khỏe giấc ngủ sớm cho nhóm tuổi trung niên và người lớn tuổi.
+            * **Insomnia (Mất ngủ)** tập trung ở nhóm **36-50** (65 người), sau đó giảm mạnh ở nhóm **51-65** (7 người).
+            * **Sleep Apnea (Ngưng thở khi ngủ)** tăng dần theo tuổi và chiếm tỷ lệ cao nhất ở nhóm **51-65** (33/76 người).
+        * **Hàm ý / Đề xuất:**
+            * Tuổi tác có liên hệ với dạng rối loạn giấc ngủ: nhóm trung niên cần chú ý đến mất ngủ, nhóm lớn tuổi cần chú ý đến ngưng thở khi ngủ.
         """
         )
 
@@ -118,10 +119,11 @@ def render_sleep_analysis(df):
         st.markdown(
             """
         * **Đánh giá chung:**
-            * **Bác sĩ (Doctor), Kỹ sư (Engineer), Bác sĩ thú y (Veterinarian)** có thời gian ngủ tương đối ổn định và thời lượng ngủ trung bình cao (khoảng 7 - 8 giờ/ngày).
-            * **Y tá (Nurse) và Đại diện bán hàng (Sales Representative)** ghi nhận thời lượng ngủ ngắn hơn và độ biến thiên (chênh lệch) giữa các cá nhân rất cao.
+            * **Kỹ sư (Engineer)** có thời lượng ngủ cao và ổn định nhất (trung vị 8.3 giờ/ngày); **Nhân viên bán hàng (Salesperson)** thấp nhất trong các nghề đông người (trung vị 6.4 giờ/ngày).
+            * **Bác sĩ (Doctor) và Y tá (Nurse)** có độ biến thiên giữa các cá nhân rộng nhất (khoảng tứ phân vị lần lượt 6.05 - 7.7 và 6.1 - 8.1 giờ).
+            * Các nghề Manager, Sales Representative, Scientist, Software Engineer chỉ có 1 - 4 người nên không đủ để nhận xét.
         * **Hàm ý / Đề xuất:**
-            * Đặc thù công việc (như trực ca đêm của Y tá hay áp lực chỉ tiêu của Dân bán hàng) ảnh hưởng trực tiếp và nghiêm trọng đến quỹ thời gian nghỉ ngơi hàng ngày.
+            * Thời lượng ngủ có liên hệ với nghề nghiệp. Tuy nhiên nghề nghiệp và giới tính trong dữ liệu gần như trùng nhau (Y tá hầu hết là nữ, Bác sĩ hầu hết là nam) nên không tách riêng được hai yếu tố này.
         """
         )
 
@@ -162,6 +164,6 @@ def render_sleep_analysis(df):
             * Mối tương quan nghịch rõ rệt: Những người báo cáo **Mức độ Stress cao (7-8/10)** tập trung chủ yếu ở mức **Chất lượng giấc ngủ thấp (4-6/10)**.
             * Ngược lại, nhóm có **Stress thấp (3-4/10)** sở hữu **Chất lượng giấc ngủ rất cao (8-9/10)**.
         * **Hàm ý / Đề xuất:**
-            * Quản lý căng thẳng (Stress management) là chìa khóa cốt lõi để cải thiện trực tiếp chất lượng giấc ngủ cho đối tượng khảo sát.
+            * Mức độ căng thẳng có liên hệ nghịch rất mạnh với chất lượng giấc ngủ; quản lý căng thẳng (Stress management) là hướng đáng ưu tiên khi muốn cải thiện giấc ngủ.
         """
         )

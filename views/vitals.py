@@ -95,8 +95,10 @@ def render_vitals(df):
     with st.expander("📌 **Giải thích & Phân tích (4.2)**", expanded=True):
         st.markdown(
             """
-        - **Y tá (Nurse):** Mức độ hoạt động thể chất cao nhưng chịu áp lực nhịp tim và stress lớn.
-        - **Kỹ sư (Software Engineer):** Duy trì diện tích ngủ và chất lượng ngủ ở mức tối ưu.
+        - **Y tá (Nurse):** Mức độ hoạt động thể chất cao nhất trong bốn nghề (78.6 phút/ngày).
+        - **Bác sĩ (Doctor):** Mức stress cao nhất (6.73) và chất lượng ngủ thấp nhất (6.65) trong bốn nghề.
+        - **Kỹ sư (Engineer):** Thời lượng ngủ (7.99 giờ) và chất lượng ngủ (8.41) cao nhất, stress thấp nhất (3.89).
+        - **Lưu ý:** Các trục được chuẩn hóa 0 - 1 theo trung bình của từng nghề, nên biểu đồ thể hiện thứ hạng tương đối giữa các nghề.
         - **Kết luận:** Phác họa bức chân dung đa chiều về rủi ro sức khỏe đặc thù theo từng ngành nghề.
         """
         )
@@ -255,6 +257,6 @@ def render_vitals(df):
             """
         - **Phân bố theo giới tính:** Cho thấy sự khác biệt về mức độ vận động và độ tuổi khảo sát giữa Nam và Nữ.
         - **Xu hướng đa biến:** Giúp quan sát đồng thời sự phân cụm giữa thể chất, độ tuổi và mức độ căng thẳng.
-        - **Kết luận:** Khẳng định yếu tố giới tính đóng vai trò điều tiết trong các chỉ số thể chất.
+        - **Kết luận:** Các chỉ số thể chất có khác biệt theo giới tính, nhưng giới tính gắn chặt với nghề nghiệp trong dữ liệu này nên chưa thể kết luận đó là ảnh hưởng của riêng giới tính.
         """
         )

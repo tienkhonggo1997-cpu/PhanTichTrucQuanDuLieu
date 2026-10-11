@@ -38,9 +38,9 @@ def render_explorer(df):
     with st.expander("📌 **Giải thích & Phân tích (5.1)**", expanded=True):
         st.markdown(
             """
-        - **Trung vị cao:** Kỹ sư (*Engineer*) và Kế toán (*Accountant*) đạt gần 8.0 giờ ngủ ổn định.
-        - **Khoảng tứ phân vị rộng:** Bác sĩ (*Doctor*) và Y tá (*Nurse*) thể hiện sự biến động lớn do ca trực.
-        - **Trung vị thấp nhất:** Nhân viên Kinh doanh (*Sales Representative*) ngủ dưới 6.0 giờ.
+        - **Trung vị cao nhất:** Kỹ sư (*Engineer*) đạt 8.3 giờ; Bác sĩ (*Doctor*) 7.6 giờ, Luật sư (*Lawyer*) 7.3 giờ, Kế toán (*Accountant*) 7.2 giờ.
+        - **Khoảng tứ phân vị rộng:** Bác sĩ (*Doctor*) và Y tá (*Nurse*) có mức biến động lớn nhất giữa các cá nhân.
+        - **Trung vị thấp nhất (nghề từ 30 người trở lên):** Nhân viên bán hàng (*Salesperson*) 6.4 giờ. *Sales Representative* thấp hơn (5.9 giờ) nhưng chỉ có 2 người nên không đủ để kết luận.
         """
         )
 
@@ -97,9 +97,9 @@ def render_explorer(df):
     with st.expander("📌 **Giải thích & Phân tích (5.3)**", expanded=True):
         st.markdown(
             """
-        - **Nhóm Normal:** Đại đa số thuộc nhóm *None* (không mắc bệnh lý giấc ngủ).
-        - **Nhóm Overweight:** Tỷ lệ người bị Mất ngủ (*Insomnia*) chiếm ưu thế tuyệt đối.
-        - **Nhóm Obese:** Tỷ lệ bị Ngưng thở khi ngủ (*Sleep Apnea*) chiếm đa số.
+        - **Nhóm Normal:** 200/216 người (93%) thuộc nhóm *None* (không mắc bệnh lý giấc ngủ).
+        - **Nhóm Overweight:** 129/148 người (87%) mắc rối loạn; Mất ngủ (*Insomnia*, 64 người) và Ngưng thở khi ngủ (*Sleep Apnea*, 65 người) gần như ngang nhau.
+        - **Nhóm Obese:** Cả 10 người đều mắc rối loạn (6 *Sleep Apnea*, 4 *Insomnia*); nhóm này quá nhỏ để so sánh tỷ lệ.
         """
         )
 
@@ -136,9 +136,9 @@ def render_explorer(df):
     with st.expander("📌 **Giải thích & Phân tích (5.4)**", expanded=True):
         st.markdown(
             """
-        - **Cụm Stress thấp (3-4) / Chất lượng ngủ cao (8-9):** Hoàn toàn là nhóm *None*.
-        - **Cụm Stress cao (7-8) / Chất lượng ngủ thấp (4-5):** Bao gồm các trường hợp mắc bệnh lý.
-        - **Kết luận:** Mức độ stress là ranh giới rõ ràng nhất phân tách giữa các nhóm bệnh lý.
+        - **Xu hướng chung:** Stress càng cao thì chất lượng ngủ càng thấp (trung bình từ 8.97 ở mức stress 3 xuống 5.86 ở mức stress 8).
+        - **Theo bệnh lý:** *Insomnia* tập trung ở mức stress 4 và 7; *Sleep Apnea* xuất hiện ở cả hai đầu (30 người ở mức stress 3 và 30 người ở mức stress 8).
+        - **Kết luận:** Stress liên hệ chặt với chất lượng ngủ, nhưng riêng mức stress không đủ để phân tách các nhóm bệnh lý.
         """
         )
 
@@ -166,7 +166,7 @@ def render_explorer(df):
     with st.expander("📌 **Giải thích & Phân tích (5.5)**", expanded=True):
         st.markdown(
             """
-        - **Nhóm None:** Duy trì vận động ở mức vừa phải (6,000 - 8,000 bước/ngày).
+        - **Nhóm None:** Duy trì vận động ở mức vừa phải (phần lớn trong khoảng 5,000 - 8,000 bước/ngày).
         - **Nhóm Sleep Apnea:** Xuất hiện phân hóa giữa nhóm béo phì ít vận động và nhóm Y tá đi lại nhiều.
         - **Kết luận:** Vận động giúp hỗ trợ sức khỏe nhưng không loại bỏ hoàn toàn nguy cơ do BMI và Stress.
         """

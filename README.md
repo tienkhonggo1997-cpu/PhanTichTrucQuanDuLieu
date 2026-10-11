@@ -77,7 +77,8 @@ Chạy lệnh `streamlit run app.py` từ thư mục gốc của repo. Dashboard
 ```
 ├── app.py                    # Thanh bên, bộ lọc, điều hướng giữa các chương
 ├── modules/
-│   └── data_loader.py        # Đọc dữ liệu thô và dữ liệu đã làm sạch
+│   ├── data_loader.py        # Đọc dữ liệu thô và dữ liệu đã làm sạch
+│   └── charts.py             # Đường mật độ (KDE) cho biểu đồ phân bố
 ├── views/
 │   ├── overview.py           # Chương 1: Tổng quan & KPIs
 │   ├── demographics.py       # Chương 2: Tiền xử lý dữ liệu

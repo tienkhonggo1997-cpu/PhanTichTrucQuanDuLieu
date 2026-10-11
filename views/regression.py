@@ -9,6 +9,9 @@ from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
 from sklearn.pipeline import Pipeline
 
+from modules.charts import kde_trace
+
+
 def render_regression(df):
     st.title("📊 Chương 6: Mô Hình Hồi Quy (Model Development)")
     st.markdown("Xây dựng và đánh giá các mô hình hồi quy (SLR, MLR, Polynomial Regression, Pipeline).")
@@ -151,21 +154,20 @@ print(f'MSE: {mean_squared_error(Y, y_pred_mlr):.4f}')
         st.subheader("📊 2. Distribution Plot: Thực tế vs Dự đoán (MLR)")
 
         fig2 = go.Figure()
-        fig2.add_trace(go.Histogram(x=Y, histnorm='probability density', name='Giá trị Thực tế (Actual)', opacity=0.4, marker_color='red'))
-        fig2.add_trace(go.Histogram(x=y_pred_mlr, histnorm='probability density', name='Dự đoán MLR (Fitted)', opacity=0.4, marker_color='blue'))
+        fig2.add_trace(kde_trace(Y, 'Giá trị Thực tế (Actual)', 'red'))
+        fig2.add_trace(kde_trace(y_pred_mlr, 'Dự đoán MLR (Fitted)', 'blue'))
 
         fig2.update_layout(
             title="2. Distribution Plot: Thực tế vs Dự đoán (MLR)",
             xaxis_title="Chất lượng Giấc ngủ (Quality of Sleep)",
-            yaxis_title="Mật độ phân bố (Density)",
-            barmode='overlay'
+            yaxis_title="Mật độ phân bố (Density)"
         )
         st.plotly_chart(fig2, use_container_width=True)
 
         st.subheader("💡 Giải thích & Phân tích")
         st.markdown(f"""
         - **Tăng độ chính xác:** Khi kết hợp cả 4 biến, **R² tăng từ {r2_slr:.4f} (SLR) lên {r2_mlr:.4f} (MLR)**.
-        - **Biểu đồ phân phối:** Đường dự đoán trùng khớp rất sát với đường dữ liệu thực tế.
+        - **Biểu đồ phân phối:** Đường dự đoán bám theo hình dạng chung của đường thực tế nhưng chưa khớp ở mọi đỉnh; mô hình ở Tab 4 khớp sát hơn.
         """)
 
     # =============================================================================
@@ -288,14 +290,13 @@ print(f'Pipeline MSE: {mean_squared_error(Y, y_pred_pipe):.4f}')
         st.subheader("⚙️ 4. Distribution Plot: Thực tế vs Dự đoán (Pipeline Deg 2)")
 
         fig4 = go.Figure()
-        fig4.add_trace(go.Histogram(x=Y, histnorm='probability density', name='Giá trị Thực tế (Actual)', opacity=0.4, marker_color='red'))
-        fig4.add_trace(go.Histogram(x=y_pred_pipe, histnorm='probability density', name='Dự đoán Pipeline (Fitted)', opacity=0.4, marker_color='green'))
+        fig4.add_trace(kde_trace(Y, 'Giá trị Thực tế (Actual)', 'red'))
+        fig4.add_trace(kde_trace(y_pred_pipe, 'Dự đoán Pipeline (Fitted)', 'green'))
 
         fig4.update_layout(
             title="4. Distribution Plot: Thực tế vs Dự đoán (Pipeline Deg 2)",
             xaxis_title="Chất lượng Giấc ngủ (Quality of Sleep)",
-            yaxis_title="Mật độ phân bố (Density)",
-            barmode='overlay'
+            yaxis_title="Mật độ phân bố (Density)"
         )
         st.plotly_chart(fig4, use_container_width=True)
 

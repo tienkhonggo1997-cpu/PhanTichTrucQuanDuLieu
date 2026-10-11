@@ -16,6 +16,8 @@ from sklearn.model_selection import (
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
 
+from modules.charts import kde_trace
+
 FEATURES = ['Sleep Duration', 'Stress Level', 'Heart Rate', 'Physical Activity Level']
 TARGET = 'Quality of Sleep'
 
@@ -139,22 +141,15 @@ cv_mean_r2 = cv_scores.mean()
         fig1 = go.Figure()
 
         # Đường thực tế (Actual)
-        fig1.add_trace(go.Histogram(
-            x=y_test, histnorm='probability density', name='Giá trị Thực tế (Actual)',
-            opacity=0.4, marker_color='red'
-        ))
+        fig1.add_trace(kde_trace(y_test, 'Giá trị Thực tế (Actual)', 'red'))
 
         # Đường dự đoán (Predicted)
-        fig1.add_trace(go.Histogram(
-            x=y_test_pred, histnorm='probability density', name='Dự đoán Tập Test (Predicted)',
-            opacity=0.4, marker_color='blue'
-        ))
+        fig1.add_trace(kde_trace(y_test_pred, 'Dự đoán Tập Test (Predicted)', 'blue'))
 
         fig1.update_layout(
             title="1. Đánh giá Mô hình trên Tập Test (30%)",
             xaxis_title="Quality of Sleep",
-            yaxis_title="Density",
-            barmode='overlay'
+            yaxis_title="Density"
         )
         st.plotly_chart(fig1, use_container_width=True)
 

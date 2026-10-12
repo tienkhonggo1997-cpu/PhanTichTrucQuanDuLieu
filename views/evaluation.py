@@ -3,7 +3,9 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 
+from sklearn.base import clone
 from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import (
     GroupKFold,
     GroupShuffleSplit,
@@ -13,6 +15,8 @@ from sklearn.model_selection import (
 )
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
+
+from modules.charts import kde_trace
 
 FEATURES = ['Sleep Duration', 'Stress Level', 'Heart Rate', 'Physical Activity Level']
 TARGET = 'Quality of Sleep'
@@ -57,10 +61,11 @@ def render_evaluation(df):
         f"Vì vậy chương này chia theo hồ sơ: Train {len(x_train)} dòng, Test {len(x_test)} dòng, không hồ sơ nào nằm ở cả hai tập.")
 
     # Khởi tạo 3 Tabs dựa trên 3 phần phân tích của Chương 7
-    tab1, tab2, tab3 = st.tabs([
+    tab1, tab2, tab3, tab4 = st.tabs([
         "🧪 Tab 1: Train/Test Split & Cross Validation",
         "⚖️ Tab 2: Phân tích Underfitting & Overfitting",
-        "🎯 Tab 3: Hồi quy Ridge & Tối ưu Alpha"
+        "🎯 Tab 3: Hồi quy Ridge & Tối ưu Alpha",
+        "🏆 Tab 4: So sánh các mô hình"
     ])
 
     # =============================================================================
@@ -136,22 +141,15 @@ cv_mean_r2 = cv_scores.mean()
         fig1 = go.Figure()
 
         # Đường thực tế (Actual)
-        fig1.add_trace(go.Histogram(
-            x=y_test, histnorm='probability density', name='Giá trị Thực tế (Actual)',
-            opacity=0.4, marker_color='red'
-        ))
+        fig1.add_trace(kde_trace(y_test, 'Giá trị Thực tế (Actual)', 'red'))
 
         # Đường dự đoán (Predicted)
-        fig1.add_trace(go.Histogram(
-            x=y_test_pred, histnorm='probability density', name='Dự đoán Tập Test (Predicted)',
-            opacity=0.4, marker_color='blue'
-        ))
+        fig1.add_trace(kde_trace(y_test_pred, 'Dự đoán Tập Test (Predicted)', 'blue'))
 
         fig1.update_layout(
             title="1. Đánh giá Mô hình trên Tập Test (30%)",
             xaxis_title="Quality of Sleep",
-            yaxis_title="Density",
-            barmode='overlay'
+            yaxis_title="Density"
         )
         st.plotly_chart(fig1, use_container_width=True)
 
@@ -383,5 +381,117 @@ ridge_test_r2 = ridge_pipe.score(x_test, y_test)
         - **Vai trò của Alpha:** Khi $\\alpha$ quá nhỏ, mô hình giống như Hồi quy đa thức thông thường (dễ bị Overfitting). Khi $\\alpha$ quá lớn, mô hình bị phạt trọng số quá mạnh dẫn đến Underfitting.
         - **Giá trị tối ưu:** $\\alpha = {best_alpha:.4f}$ cho Validation $R^2$ cao nhất (**{r_val_scores[best_idx]:.4f}**).{edge_text}
         - **So sánh trên tập Test:** Ridge bậc 3 đạt Test $R^2$ = **{ridge_test_r2:.4f}** (Train {ridge_train_r2:.4f}), mô hình tuyến tính 4 biến ở Tab 1 đạt **{test_r2:.4f}**. Kết luận: {compare_text}.
-        - **Lưu ý:** đây là kết quả của **một lần chia** với tập Test {len(x_test)} dòng. Mô hình bậc 3 có nhiều tham số nên nhạy với cách chia hơn mô hình tuyến tính; thứ hạng hai mô hình có thể thay đổi khi chia khác đi.
+        - **Lưu ý:** đây là kết quả của **một lần chia** với tập Test {len(x_test)} dòng. Thứ hạng các mô hình có thể thay đổi khi chia khác đi; xem Tab 4 để so sánh qua kiểm định chéo và qua nhiều lần chia.
+        """)
+
+    # =============================================================================
+    # TAB 4: SO SÁNH CÁC MÔ HÌNH
+    # =============================================================================
+    with tab4:
+        st.header("4. So sánh các mô hình hồi quy")
+        st.markdown(
+            "Đánh giá bốn mô hình của Chương 6 và mô hình Ridge trên **cùng một cách chia theo hồ sơ**, "
+            "để so sánh công bằng khả năng dự đoán dữ liệu chưa từng thấy.")
+
+        def poly_pipe(degree, model):
+            return Pipeline([
+                ('scale', StandardScaler()),
+                ('polynomial', PolynomialFeatures(degree=degree, include_bias=False)),
+                ('model', model)
+            ])
+
+        # Tên mô hình -> (các biến đầu vào, mô hình)
+        models = {
+            'Tuyến tính đơn (Sleep Duration)': (['Sleep Duration'], LinearRegression()),
+            'Đa thức bậc 2 (Stress Level)': (['Stress Level'], poly_pipe(2, LinearRegression())),
+            'Tuyến tính đa biến (4 biến)': (FEATURES, LinearRegression()),
+            'Pipeline đa thức bậc 2 (4 biến)': (FEATURES, poly_pipe(2, LinearRegression())),
+            'Ridge đa thức bậc 3 (4 biến)': (FEATURES, poly_pipe(3, Ridge(alpha=best_alpha))),
+        }
+
+        # 1. Một lần chia Train/Test + 5-Fold CV theo hồ sơ
+        rows = []
+        for name, (cols, est) in models.items():
+            m = clone(est).fit(x_train[cols], y_train)
+            cv = cross_val_score(clone(est), X_data[cols], Y, cv=GroupKFold(n_splits=5), groups=groups)
+            rows.append({
+                'Mô hình': name,
+                'Train R²': m.score(x_train[cols], y_train),
+                'Test R²': m.score(x_test[cols], y_test),
+                'Test MSE': mean_squared_error(y_test, m.predict(x_test[cols])),
+                'CV R² (TB)': cv.mean(),
+                'CV R² (thấp nhất)': cv.min(),
+            })
+        compare_df = pd.DataFrame(rows)
+
+        # 2. Độ ổn định: lặp lại 30 cách chia Train/Test khác nhau
+        stability = {name: [] for name in models}
+        repeat_split = GroupShuffleSplit(n_splits=30, test_size=0.3, random_state=1)
+        for tr_idx, te_idx in repeat_split.split(X_data, Y, groups):
+            for name, (cols, est) in models.items():
+                m = clone(est).fit(X_data.iloc[tr_idx][cols], Y.iloc[tr_idx])
+                stability[name].append(m.score(X_data.iloc[te_idx][cols], Y.iloc[te_idx]))
+        stability_df = pd.DataFrame(stability)
+        stability_summary = pd.DataFrame({
+            'Mô hình': stability_df.columns,
+            'Test R² trung bình': stability_df.mean().values,
+            'Thấp nhất': stability_df.min().values,
+            'Cao nhất': stability_df.max().values,
+            'Độ lệch chuẩn': stability_df.std().values,
+        })
+
+        col_code4, col_res4 = st.columns([1, 1])
+
+        with col_code4:
+            st.subheader("💻 Code Python tính toán")
+            code_tab4 = """
+models = {
+    'Tuyến tính đơn (Sleep Duration)': (['Sleep Duration'], LinearRegression()),
+    'Đa thức bậc 2 (Stress Level)': (['Stress Level'], poly_pipe(2, LinearRegression())),
+    'Tuyến tính đa biến (4 biến)': (FEATURES, LinearRegression()),
+    'Pipeline đa thức bậc 2 (4 biến)': (FEATURES, poly_pipe(2, LinearRegression())),
+    'Ridge đa thức bậc 3 (4 biến)': (FEATURES, poly_pipe(3, Ridge(alpha=best_alpha))),
+}
+
+for name, (cols, est) in models.items():
+    m = clone(est).fit(x_train[cols], y_train)
+    train_r2 = m.score(x_train[cols], y_train)
+    test_r2 = m.score(x_test[cols], y_test)
+    cv = cross_val_score(clone(est), X_data[cols], Y,
+                         cv=GroupKFold(n_splits=5), groups=groups)
+"""
+            st.code(code_tab4, language='python')
+
+        with col_res4:
+            st.subheader("📋 Kết quả trên một lần chia & Cross-Validation")
+            st.dataframe(compare_df.round(4), hide_index=True, use_container_width=True)
+
+        st.subheader("📊 Biểu đồ so sánh R² của các mô hình")
+
+        fig4 = go.Figure()
+        for col, color in [('Train R²', 'blue'), ('Test R²', 'red'), ('CV R² (TB)', 'green')]:
+            fig4.add_trace(go.Bar(x=compare_df['Mô hình'], y=compare_df[col], name=col, marker_color=color,
+                                  opacity=0.75, text=compare_df[col].round(3), textposition='outside'))
+        fig4.update_layout(
+            title="4. So sánh R² huấn luyện, kiểm tra và kiểm định chéo",
+            yaxis_title="Hệ số xác định R²",
+            barmode='group'
+        )
+        st.plotly_chart(fig4, use_container_width=True)
+
+        st.subheader("🔁 Độ ổn định qua 30 lần chia Train/Test")
+        st.dataframe(stability_summary.round(4), hide_index=True, use_container_width=True)
+
+        best_cv = compare_df.loc[compare_df['CV R² (TB)'].idxmax()]
+        best_test = compare_df.loc[compare_df['Test R²'].idxmax()]
+        best_stable = stability_summary.loc[stability_summary['Test R² trung bình'].idxmax()]
+        single_best = compare_df.iloc[:2]['CV R² (TB)'].max()
+        multi_linear = compare_df.iloc[2]['CV R² (TB)']
+
+        st.subheader("💡 Giải thích & Phân tích")
+        st.markdown(f"""
+        - **Mô hình tốt nhất theo Cross-Validation:** **{best_cv['Mô hình']}** với $R^2$ trung bình **{best_cv['CV R² (TB)']:.4f}**; trên một lần chia, Test $R^2$ cao nhất thuộc về **{best_test['Mô hình']}** ({best_test['Test R²']:.4f}).
+        - **Một biến so với nhiều biến:** hai mô hình một biến đạt $R^2$ kiểm định chéo cao nhất là {single_best:.4f}, trong khi mô hình tuyến tính 4 biến đạt {multi_linear:.4f}: thêm biến đầu vào cải thiện rõ khả năng dự đoán.
+        - **Độ ổn định:** qua 30 lần chia, **{best_stable['Mô hình']}** có Test $R^2$ trung bình cao nhất (**{best_stable['Test R² trung bình']:.4f}**, thấp nhất {best_stable['Thấp nhất']:.4f}, độ lệch chuẩn {best_stable['Độ lệch chuẩn']:.4f}).
+        - **Lưu ý:** alpha của Ridge được chọn một lần ở Tab 3 và giữ cố định trong các phép so sánh này.
         """)
